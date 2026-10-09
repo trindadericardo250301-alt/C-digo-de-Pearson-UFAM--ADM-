@@ -1,0 +1,330 @@
+# ============================================================
+# ANÁLISE CONTEXTUAL DE POLARIDADE - VERSÃO CORRIGIDA
+# ============================================================
+
+# Expressões que significam ausência de resposta/opinião
+nao_classificaveis = [
+    "nao sei",
+    "não sei",
+    "nao sei responder",
+    "não sei responder",
+    "nao tenho opiniao",
+    "não tenho opinião",
+    "sem opiniao",
+    "sem opinião",
+    "nada",
+    "nenhuma",
+    "nenhum"
+]
+
+# Indicadores de preservação / valorização
+marcadores_positivos = [
+    "preservar",
+    "manter",
+    "fortalecer",
+    "valorizar",
+    "proteger",
+    "garantir",
+    "reforcar",
+    "autenticidade",
+    "originalidade",
+    "identidade",
+    "essencia",
+    "singularidade",
+    "criatividade",
+    "humanizacao",
+    "humanizada",
+    "humanizado",
+    "humano",
+    "humana",
+    "inovacao",
+    "diferenciacao"
+]
+
+# Indicadores de risco/perda
+marcadores_negativos = [
+    "perda de autenticidade",
+    "perder autenticidade",
+    "perder a autenticidade",
+    "perda de originalidade",
+    "perder originalidade",
+    "perder a originalidade",
+    "acaba com a originalidade",
+    "falta de autenticidade",
+    "sem autenticidade",
+    "sem originalidade",
+    "artificial",
+    "generico",
+    "generica",
+    "padronizacao",
+    "homogeneizacao",
+    "generalizacao",
+    "desconexao",
+    "dependencia",
+    "dependente",
+    "substituir o humano",
+    "substituir pessoas",
+    "uso excessivo",
+    "excessivamente"
+]
+
+# Indicadores de uso condicionado/equilibrado
+marcadores_condicionais = [
+    "equilibrio",
+    "moderado",
+    "moderada",
+    "moderacao",
+    "consciente",
+    "controlado",
+    "controlada",
+    "adequada",
+    "adequado",
+    "sem exageros",
+    "com cautela",
+    "com cuidado",
+    "com supervisao",
+    "supervisao humana",
+    "curadoria humana",
+    "olhar humano",
+    "intervencao humana",
+    "comando humano",
+    "como apoio",
+    "como auxilio",
+    "ferramenta de apoio",
+    "ferramenta de auxilio",
+    "complementar",
+    "assistente",
+    "nao substitui",
+    "nao substituir",
+    "apenas uma ferramenta",
+    "depende",
+    "desde que"
+]
+
+
+# ============================================================
+# FUNÇÃO PARA LOCALIZAR MARCADORES
+# ============================================================
+
+def encontrar_marcadores(texto, lista):
+    encontrados = []
+
+    texto_limpo = normalizar(texto)
+
+    for termo in lista:
+        termo_limpo = normalizar(termo)
+
+        if termo_limpo in texto_limpo:
+            encontrados.append(termo)
+
+    return encontrados
+
+
+# ============================================================
+# FUNÇÃO PRINCIPAL DE CLASSIFICAÇÃO
+# ============================================================
+
+def classificar_contexto(texto):
+
+    texto_limpo = normalizar(texto)
+
+    # ----------------------------------------
+    # 1. RESPOSTAS NÃO CLASSIFICÁVEIS
+    # ----------------------------------------
+
+    for expressao in nao_classificaveis:
+
+        expressao_limpa = normalizar(expressao)
+
+        # Aqui exigimos que a resposta seja curta
+        # para evitar classificar textos longos erroneamente
+        if expressao_limpa == texto_limpo:
+
+            return (
+                "NÃO CLASSIFICÁVEL",
+                f"Resposta sem posicionamento: {expressao}"
+            )
+
+    # ----------------------------------------
+    # 2. ENCONTRAR MARCADORES
+    # ----------------------------------------
+
+    positivos = encontrar_marcadores(
+        texto,
+        marcadores_positivos
+    )
+
+    negativos = encontrar_marcadores(
+        texto,
+        marcadores_negativos
+    )
+
+    condicionais = encontrar_marcadores(
+        texto,
+        marcadores_condicionais
+    )
+
+    # ----------------------------------------
+    # 3. CLASSIFICAÇÃO
+    # ----------------------------------------
+
+    # Há condição explícita sobre como usar IA
+    if condicionais:
+
+        justificativa = (
+            "Uso condicionado/equilibrado. "
+            "Marcadores: "
+            + ", ".join(condicionais)
+        )
+
+        return "POSITIVA/CONDICIONAL", justificativa
+
+
+    # Há aspectos positivos E negativos
+    if positivos and negativos:
+
+        justificativa = (
+            "Apresenta simultaneamente elementos "
+            "positivos e negativos. "
+            "Positivos: "
+            + ", ".join(positivos)
+            + " | Negativos: "
+            + ", ".join(negativos)
+        )
+
+        return "MISTA/AMBIVALENTE", justificativa
+
+
+    # Predomínio negativo
+    if negativos:
+
+        justificativa = (
+            "Marcadores de risco/perda: "
+            + ", ".join(negativos)
+        )
+
+        return "NEGATIVA", justificativa
+
+
+    # Predomínio positivo
+    if positivos:
+
+        justificativa = (
+            "Marcadores de preservação/valorização: "
+            + ", ".join(positivos)
+        )
+
+        return "POSITIVA", justificativa
+
+
+    # Nenhum marcador suficiente
+    return (
+        "NEUTRA/INDEFINIDA",
+        "Nenhum marcador contextual suficiente."
+    )
+
+
+# ============================================================
+# APLICAR ÀS 101 RESPOSTAS
+# ============================================================
+
+resultados_contexto = []
+
+for numero, resposta in enumerate(respostas, start=1):
+
+    polaridade, justificativa = classificar_contexto(resposta)
+
+    resultados_contexto.append({
+        "Resposta": numero,
+        "Texto": resposta,
+        "Polaridade contextual": polaridade,
+        "Justificativa": justificativa
+    })
+
+
+df_contexto = pd.DataFrame(resultados_contexto)
+
+
+# ============================================================
+# MOSTRAR RESUMO NO TERMINAL
+# ============================================================
+
+print("\n==========================================")
+print("POLARIDADE CONTEXTUAL - VERSÃO CORRIGIDA")
+print("==========================================\n")
+
+resumo = (
+    df_contexto["Polaridade contextual"]
+    .value_counts()
+)
+
+print(resumo)
+
+
+# ============================================================
+# CALCULAR PORCENTAGENS
+# ============================================================
+
+resumo_df = resumo.reset_index()
+
+resumo_df.columns = [
+    "Polaridade",
+    "Quantidade"
+]
+
+resumo_df["Percentual"] = (
+    resumo_df["Quantidade"]
+    / len(df_contexto)
+    * 100
+).round(1)
+
+
+print("\n=== RESUMO COM PERCENTUAIS ===\n")
+
+print(resumo_df.to_string(index=False))
+
+
+# ============================================================
+# MOSTRAR CLASSIFICAÇÃO DE CADA RESPOSTA
+# ============================================================
+
+print("\n=== CLASSIFICAÇÃO POR RESPOSTA ===\n")
+
+for _, linha in df_contexto.iterrows():
+
+    print(
+        f"Resposta {linha['Resposta']}: "
+        f"{linha['Polaridade contextual']}"
+    )
+
+
+# ============================================================
+# SALVAR EM EXCEL
+# ============================================================
+
+with pd.ExcelWriter(
+    "polaridade_contextual_corrigida.xlsx",
+    engine="openpyxl"
+) as writer:
+
+    # Aba com as 101 respostas
+    df_contexto.to_excel(
+        writer,
+        sheet_name="Classificacao",
+        index=False
+    )
+
+    # Aba com o resumo
+    resumo_df.to_excel(
+        writer,
+        sheet_name="Resumo",
+        index=False
+    )
+
+
+print("\n==========================================")
+print("ANÁLISE CONTEXTUAL CONCLUÍDA!")
+print(
+    "Arquivo 'polaridade_contextual_corrigida.xlsx' criado."
+)
+print("==========================================")
